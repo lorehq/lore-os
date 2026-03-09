@@ -1,0 +1,41 @@
+{
+  "profiles": {
+    "off": {
+      "memoryGuard": false,
+      "autoMemoryRedirect": false,
+      "harnessGuard": false,
+      "searchNudge": false,
+      "memoryNudge": false,
+      "ambiguityNudge": false
+    },
+    "minimal": {
+      "memoryGuard": true,
+      "autoMemoryRedirect": true,
+      "harnessGuard": true,
+      "searchNudge": false,
+      "memoryNudge": false,
+      "ambiguityNudge": false
+    },
+    "standard": {
+      "memoryGuard": true,
+      "autoMemoryRedirect": true,
+      "harnessGuard": true,
+      "searchNudge": true,
+      "memoryNudge": true,
+      "ambiguityNudge": true,
+      "nudgeEvery": 15,
+      "warnAt": 30
+    },
+    "discovery": {
+      "memoryGuard": true,
+      "autoMemoryRedirect": true,
+      "harnessGuard": true,
+      "searchNudge": true,
+      "memoryNudge": true,
+      "ambiguityNudge": true,
+      "nudgeEvery": 5,
+      "warnAt": 10
+    }
+  },
+  "defaultProfile": "standard"
+}

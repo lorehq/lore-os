@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "slug": "lore-os",
+  "name": "Lore OS",
+  "version": "0.1.5",
+  "description": "Opinionated behavioral layer for the Lore harness. Guards, nudges, ambiguity scanning, and a structured knowledge system.",
+  "hooks": {
+    "pre-tool-use": "SCRIPTS/pre-tool-use.mjs",
+    "post-tool-use": "SCRIPTS/post-tool-use.mjs",
+    "prompt-submit": "SCRIPTS/prompt-submit.mjs"
+  },
+  "agentic": "AGENTIC",
+  "setup": "SCRIPTS/setup.mjs",
+  "teardown": "SCRIPTS/teardown.mjs"
+}

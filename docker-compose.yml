@@ -1,0 +1,11 @@
+name: lore
+services:
+  memory:
+    container_name: lore-os
+    image: lorehq/lore-os-services:0.1.5
+    ports:
+      - '9184:8080'
+    volumes:
+      - ~/LORE-OS/DATABANK:/data/DATABANK:ro
+      - ~/LORE-OS/HOT:/data/redis
+    restart: unless-stopped
