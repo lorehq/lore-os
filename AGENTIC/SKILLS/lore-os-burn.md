@@ -19,9 +19,9 @@ Promote hot session facts from Redis into the persistent DATABANK.
 
 **1. Scan Hot Memory**
 
-Use the `lore_hot_recall` MCP tool:
+Use the `lore_recall` MCP tool:
 ```
-lore_hot_recall(limit: 20)
+lore_recall(limit: 20)
 ```
 
 Fallback via redis-cli (keys are scoped per project):
