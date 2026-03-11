@@ -10,6 +10,14 @@
     "prompt-submit": "SCRIPTS/prompt-submit.mjs"
   },
   "agentic": "AGENTIC",
+  "tui": {
+    "pages": [
+      {
+        "name": "Memory",
+        "script": "SCRIPTS/tui-memory.mjs"
+      }
+    ]
+  },
   "setup": "SCRIPTS/setup.mjs",
   "teardown": "SCRIPTS/teardown.mjs"
 }
