@@ -2,12 +2,21 @@
   "manifest_version": 1,
   "slug": "lore-os",
   "name": "Lore OS",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Opinionated behavioral layer for the Lore harness. Guards, nudges, ambiguity scanning, and a structured knowledge system.",
   "hooks": {
-    "pre-tool-use": "SCRIPTS/pre-tool-use.mjs",
-    "post-tool-use": "SCRIPTS/post-tool-use.mjs",
-    "prompt-submit": "SCRIPTS/prompt-submit.mjs"
+    "pre-tool-use": [
+      { "name": "Memory Guard", "script": "SCRIPTS/memory-guard.mjs" },
+      { "name": "Auto-Memory Redirect", "script": "SCRIPTS/auto-memory-redirect.mjs" },
+      { "name": "Harness Guard", "script": "SCRIPTS/harness-guard.mjs" },
+      { "name": "Search Nudge", "script": "SCRIPTS/search-nudge.mjs" }
+    ],
+    "post-tool-use": [
+      { "name": "Memory Capture", "script": "SCRIPTS/memory-capture.mjs" }
+    ],
+    "prompt-submit": [
+      { "name": "Ambiguity Nudge", "script": "SCRIPTS/ambiguity-nudge.mjs" }
+    ]
   },
   "tui": {
     "pages": [
