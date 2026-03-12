@@ -16,40 +16,9 @@ Epics are the middle work-item tier. Tactical, weeks-long scope. Always nested u
 4. Write `tasks.md` — agent-managed task checklist.
 5. Create `items/` directory.
 
-## Schema — index.md
+## Schema
 
-```markdown
----
-title: {Title}
-status: active
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
-summary: One-line summary of the epic
----
-# {Title}
-
-## Goal
-
-[What this epic delivers]
-
-## Scope
-
-[Specific deliverables]
-```
-
-## Schema — tasks.md
-
-```markdown
-# Tasks
-
-## Active
-
-- [ ] {task description}
-
-## Done
-
-- [x] {completed task}
-```
+See `assets/epic-template.md` for the `index.md` and `tasks.md` schemas.
 
 ## Rules
 

@@ -15,15 +15,7 @@ Notes are quick captures — scratch thoughts, reminders, decisions to revisit. 
 
 ## Schema
 
-```markdown
----
-title: {Title}
-status: open
-created: {YYYY-MM-DD}
----
-
-{Content — preserve the operator's words, don't over-polish}
-```
+See `assets/note-template.md` for the file schema.
 
 ## Rules
 
