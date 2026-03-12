@@ -9,7 +9,6 @@
     "post-tool-use": "SCRIPTS/post-tool-use.mjs",
     "prompt-submit": "SCRIPTS/prompt-submit.mjs"
   },
-  "agentic": "AGENTIC",
   "tui": {
     "pages": [
       {
