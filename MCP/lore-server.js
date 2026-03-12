@@ -326,6 +326,27 @@ async function loreFieldnote(name, description, body) {
   }
 }
 
+async function loreForget(topic, scope) {
+  if (!topic || !topic.trim()) return 'Error: topic parameter is required.';
+  const validScopes = ['session', 'project', 'global'];
+  const s = validScopes.includes(scope) ? scope : 'project';
+  const session = readCurrentSession();
+  const sessionRef = session ? session.id : '';
+  try {
+    const raw = await httpPost(sidecarUrl('/memory/hot/delete'), {
+      topic: topic.trim(), scope: s, project: PROJECT_NAME,
+      session_ref: sessionRef,
+    });
+    const parsed = JSON.parse(raw);
+    if (parsed.deleted) {
+      return `Deleted ${s} memory: ${topic.trim()}`;
+    }
+    return `No ${s} memory found with topic: ${topic.trim()}`;
+  } catch (err) {
+    return `Memory engine unavailable: ${err.message}`;
+  }
+}
+
 // ── MCP protocol ────────────────────────────────────────────────────────────
 
 const SERVER_INFO = {
@@ -428,6 +449,24 @@ const TOOLS = [
       required: ['name', 'body'],
     },
   },
+  {
+    name: 'lore_forget',
+    description:
+      'Delete a hot memory entry by topic and scope. Use when a memory is outdated, wrong, or no longer relevant. ' +
+      'Use lore_recall first to find the exact topic name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string', description: 'The topic key of the memory to delete (exact match from lore_recall).' },
+        scope: {
+          type: 'string',
+          enum: ['session', 'project', 'global'],
+          description: 'Scope of the memory to delete. Default: project.',
+        },
+      },
+      required: ['topic'],
+    },
+  },
 ];
 
 // Route JSON-RPC requests to the appropriate handler.
@@ -481,6 +520,9 @@ async function handleRequest(req) {
           break;
         case 'lore_fieldnote':
           text = await loreFieldnote(args.name, args.description, args.body);
+          break;
+        case 'lore_forget':
+          text = await loreForget(args.topic, args.scope);
           break;
         default:
           return {
