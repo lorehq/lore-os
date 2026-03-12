@@ -21,7 +21,7 @@
   "tui": {
     "pages": [
       {
-        "name": "Memory",
+        "name": "Lore OS",
         "script": "SCRIPTS/tui-memory.mjs"
       }
     ]
