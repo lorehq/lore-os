@@ -1,6 +1,6 @@
 ---
 name: ambiguityNudge
 hook: prompt-submit
-description: Flags vague or ambiguous terms in the user's prompt before submission.
+description: Standing reminder for the LLM to surface ambiguity in the user's prompt.
 ---
-[93m[▆▆▆ LORE-OS:{{NONCE}}] Detected potentially ambiguous language. Consider clarifying vague terms before proceeding. [LORE-OS:{{NONCE}} ▆▆▆][0m
+[93m[▆▆▆ LORE-OS:{{NONCE}}] If the user's request is vague or ambiguous, ask for clarification before acting. Do not guess. [LORE-OS:{{NONCE}} ▆▆▆][0m
