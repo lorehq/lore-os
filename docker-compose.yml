@@ -2,7 +2,7 @@ name: lore
 services:
   memory:
     container_name: lore-os
-    image: lorehq/lore-os-services:latest
+    image: lorehq/lore-os-services:0.1.9
     ports:
       - '9184:8080'
     volumes:
