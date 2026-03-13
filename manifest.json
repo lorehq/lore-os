@@ -22,7 +22,7 @@
     "pages": [
       {
         "name": "Lore OS",
-        "script": "SCRIPTS/tui-memory.mjs"
+        "script": "SCRIPTS/tui-page.mjs"
       }
     ]
   },
