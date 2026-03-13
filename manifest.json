@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "slug": "lore-os",
   "name": "Lore OS",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Opinionated behavioral layer for the Lore harness. Guards, nudges, ambiguity scanning, and a structured knowledge system.",
   "hooks": {
     "pre-tool-use": [
