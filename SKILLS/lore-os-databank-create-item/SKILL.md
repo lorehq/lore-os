@@ -15,40 +15,9 @@ Items are the leaf work-item tier. Deliverables, days-long scope. Always nested 
 3. Write `index.md` — the item description.
 4. Write `tasks.md` — agent-managed task checklist.
 
-## Schema — index.md
+## Schema
 
-```markdown
----
-title: {Title}
-status: active
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
-summary: One-line summary of the item
----
-# {Title}
-
-## Deliverable
-
-[What this item produces]
-
-## Acceptance Criteria
-
-[How we know it's done]
-```
-
-## Schema — tasks.md
-
-```markdown
-# Tasks
-
-## Active
-
-- [ ] {task description}
-
-## Done
-
-- [x] {completed task}
-```
+See `assets/item-template.md` for the `index.md` and `tasks.md` schemas.
 
 ## Rules
 

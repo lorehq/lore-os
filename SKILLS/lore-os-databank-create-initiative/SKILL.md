@@ -16,44 +16,9 @@ Initiatives are the top-level work-item tier. Strategic, months-long scope. Cont
 4. Write `tasks.md` — agent-managed task checklist.
 5. Create `epics/` directory.
 
-## Schema — index.md
+## Schema
 
-```markdown
----
-title: {Title}
-status: active
-created: {YYYY-MM-DD}
-updated: {YYYY-MM-DD}
-summary: One-line summary of the initiative
----
-# {Title}
-
-## Goal
-
-[What this initiative aims to achieve]
-
-## Scope
-
-[What's in and out of scope]
-
-## Success Criteria
-
-[How we know it's done]
-```
-
-## Schema — tasks.md
-
-```markdown
-# Tasks
-
-## Active
-
-- [ ] {task description}
-
-## Done
-
-- [x] {completed task}
-```
+See `assets/initiative-template.md` for the `index.md` and `tasks.md` schemas.
 
 ## Rules
 

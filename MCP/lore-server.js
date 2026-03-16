@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// Lore MCP Server — Knowledge Base, Hot Memory, and Fieldnotes
+// Lore MCP Server — Knowledge Base, Scoped Memory, and Fieldnotes
 // JSON-RPC 2.0 over stdio (newline-delimited JSON). Zero dependencies.
 //
 // Tools:
-//   lore_search            — semantic search across the knowledge base
-//   lore_read              — read a knowledge base file by path
-//   lore_health            — memory engine health and index status
-//   lore_hot_recall        — list hot memory facts with scores
-//   lore_hot_write         — write a fact to hot memory (agent scratchpad)
-//   lore_hot_fieldnote     — draft a fieldnote in hot memory for later graduation
-//   lore_hot_session_note  — record session context (decisions, scope, rejected approaches)
+//   lore_search           — semantic search across the knowledge base
+//   lore_read             — read a knowledge base file by path
+//   lore_health           — memory engine health and index status
+//   lore_recall           — recall hot memory entries sorted by heat
+//   lore_session_memory   — write session-scoped memory (this conversation)
+//   lore_project_memory   — write project-scoped memory (cross-session)
+//   lore_fieldnote        — draft a global fieldnote for later graduation
 //
 // Self-contained — zero external imports beyond Node.js stdlib.
 // Lives at ~/.lore-os/MCP/lore-server.js. Bundle root is __dirname/..
@@ -142,6 +142,42 @@ function readFileContent(filePath) {
 // Derive project name from cwd: /home/andrew/Github/foo -> home-andrew-Github-foo
 const PROJECT_NAME = path.resolve(process.cwd()).replace(/^\//, '').replace(/\//g, '-');
 
+// ── Session state ────────────────────────────────────────────────────────────
+// Read the most recent session state file written by the Lore binary.
+// Returns { id, platform, project } or null if no session file exists.
+
+function readCurrentSession() {
+  const sessDir = path.join(process.cwd(), '.lore', '.sessions');
+  let entries;
+  try {
+    entries = fs.readdirSync(sessDir);
+  } catch {
+    return null;
+  }
+
+  // Find newest file by mtime
+  let newest = null;
+  let newestMtime = 0;
+  for (const name of entries) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      const stat = fs.statSync(path.join(sessDir, name));
+      if (stat.mtimeMs > newestMtime) {
+        newestMtime = stat.mtimeMs;
+        newest = name;
+      }
+    } catch { /* skip */ }
+  }
+
+  if (!newest) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(path.join(sessDir, newest), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 // ── Tool implementations ────────────────────────────────────────────────────
 
 async function loreSearch(query, k) {
@@ -203,85 +239,109 @@ async function loreHealth() {
   }
 }
 
-async function loreHotRecall(limit, scope) {
+async function loreRecall(limit, scope) {
   const n = Math.max(1, Math.min(limit || 10, 50));
-  const s = ['global', 'project', 'all'].includes(scope) ? scope : 'project';
+  const validScopes = ['session', 'project', 'global', 'all'];
+  const s = validScopes.includes(scope) ? scope : 'project';
+  const session = readCurrentSession();
+  const sessionId = session ? session.id : '';
   try {
-    const url = sidecarUrl(
-      `/memory/hot/recall?limit=${n}&scope=${encodeURIComponent(s)}&project=${encodeURIComponent(PROJECT_NAME)}`,
-    );
+    const params = new URLSearchParams({
+      limit: String(n),
+      scope: s,
+      project: PROJECT_NAME,
+      session_id: sessionId,
+    });
+    const url = sidecarUrl(`/memory/hot/recall?${params}`);
     const raw = await httpGet(url);
     const parsed = JSON.parse(raw);
     const facts = parsed.facts || [];
 
-    if (facts.length === 0) return `No hot memory facts (scope: ${s}).`;
+    if (facts.length === 0) return `No memories (scope: ${s}).`;
 
     const parts = facts.map((f) => {
       const display = f.type === 'fieldnote'
         ? `${f.description || ''}\n${f.body || ''}`
         : f.content || '';
-      return `[${f.score.toFixed(2)}] ${f.key} (${f.type}, ${f.tier})${display ? '\n' + display : ''}`;
+      return `[${f.score.toFixed(2)}] ${f.topic} (${f.type}, ${f.scope})${display ? '\n' + display : ''}`;
     });
-    return `${facts.length} hot facts (scope: ${s}):\n\n${parts.join('\n\n')}`;
+    return `${facts.length} memories (scope: ${s}):\n\n${parts.join('\n\n')}`;
   } catch (err) {
     return `Memory engine unavailable: ${err.message}`;
   }
 }
 
-async function loreHotWrite(key, content, scope) {
-  if (!key || !key.trim()) {
-    return 'Error: key parameter is required.';
-  }
-  if (!content || !content.trim()) {
-    return 'Error: content parameter is required.';
-  }
-  const k = key.trim();
-  const s = scope === 'global' ? 'global' : 'project';
+async function loreSessionMemory(topic, content) {
+  if (!topic || !topic.trim()) return 'Error: topic parameter is required.';
+  if (!content || !content.trim()) return 'Error: content parameter is required.';
+  const session = readCurrentSession();
+  const sessionRef = session ? session.id : '';
   try {
-    const url = sidecarUrl('/memory/hot/write');
-    await httpPost(url, {
-      key: k, content: content.trim(), scope: s,
-      project: PROJECT_NAME, type: 'fact',
+    await httpPost(sidecarUrl('/memory/hot/write'), {
+      topic: topic.trim(), content: content.trim(),
+      scope: 'session', project: PROJECT_NAME,
+      type: 'session-memory', session_ref: sessionRef,
     });
-    return `Recorded to hot memory (${s}): ${k}`;
+    return `Session memory recorded: ${topic.trim()}`;
   } catch (err) {
     return `Memory engine unavailable: ${err.message}`;
   }
 }
 
-async function loreHotFieldnote(name, description, body) {
-  if (!name || !name.trim()) {
-    return 'Error: name parameter is required.';
+async function loreProjectMemory(topic, content) {
+  if (!topic || !topic.trim()) return 'Error: topic parameter is required.';
+  if (!content || !content.trim()) return 'Error: content parameter is required.';
+  const session = readCurrentSession();
+  const sessionRef = session ? session.id : '';
+  try {
+    await httpPost(sidecarUrl('/memory/hot/write'), {
+      topic: topic.trim(), content: content.trim(),
+      scope: 'project', project: PROJECT_NAME,
+      type: 'project-memory', session_ref: sessionRef,
+    });
+    return `Project memory recorded: ${topic.trim()}`;
+  } catch (err) {
+    return `Memory engine unavailable: ${err.message}`;
   }
-  if (!body || !body.trim()) {
-    return 'Error: body parameter is required.';
-  }
+}
+
+async function loreFieldnote(name, description, body) {
+  if (!name || !name.trim()) return 'Error: name parameter is required.';
+  if (!body || !body.trim()) return 'Error: body parameter is required.';
   const n = name.trim();
+  const session = readCurrentSession();
+  const sessionRef = session ? session.id : '';
   try {
-    const url = sidecarUrl('/memory/hot/write');
-    await httpPost(url, {
-      key: `fieldnote:${n}`, scope: 'global', project: PROJECT_NAME,
-      type: 'fieldnote', name: n,
+    await httpPost(sidecarUrl('/memory/hot/write'), {
+      topic: `fieldnote:${n}`, scope: 'global', project: PROJECT_NAME,
+      type: 'fieldnote', session_ref: sessionRef,
+      name: n,
       content: (description || '').trim(),
       description: (description || '').trim(),
       body: body.trim(),
     });
-    return `Fieldnote drafted in hot memory (global): ${n}\nUse /lore memory burn to review and graduate to the knowledge base.`;
+    return `Fieldnote drafted (global): ${n}\nUse /lore-os-burn to review and graduate to the knowledge base.`;
   } catch (err) {
     return `Memory engine unavailable: ${err.message}`;
   }
 }
 
-async function loreHotSessionNote(key, content) {
-  if (!key || !key.trim()) return 'Error: key parameter is required.';
-  if (!content || !content.trim()) return 'Error: content parameter is required.';
+async function loreForget(topic, scope) {
+  if (!topic || !topic.trim()) return 'Error: topic parameter is required.';
+  const validScopes = ['session', 'project', 'global'];
+  const s = validScopes.includes(scope) ? scope : 'project';
+  const session = readCurrentSession();
+  const sessionRef = session ? session.id : '';
   try {
-    const url = sidecarUrl('/memory/hot/write');
-    await httpPost(url, {
-      key: `note:${key.trim()}`, scope: 'project', project: PROJECT_NAME,
-      type: 'session-note', content: content.trim(),
+    const raw = await httpPost(sidecarUrl('/memory/hot/delete'), {
+      topic: topic.trim(), scope: s, project: PROJECT_NAME,
+      session_ref: sessionRef,
     });
-    return `Session note recorded (${PROJECT_NAME}): ${key.trim()}`;
+    const parsed = JSON.parse(raw);
+    if (parsed.deleted) {
+      return `Deleted ${s} memory: ${topic.trim()}`;
+    }
+    return `No ${s} memory found with topic: ${topic.trim()}`;
   } catch (err) {
     return `Memory engine unavailable: ${err.message}`;
   }
@@ -326,49 +386,59 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
-    name: 'lore_hot_recall',
+    name: 'lore_recall',
     description:
-      'Recall hot memory — list recently tracked facts, observations, and draft fieldnotes with their heat scores. ' +
-      'Higher scores = more recently or frequently accessed. Facts decay over time.',
+      'Recall memories sorted by heat score. Returns session, project, and global memories by default. ' +
+      'Higher scores = more recently or frequently accessed. Memories decay over time.',
     inputSchema: {
       type: 'object',
       properties: {
-        limit: { type: 'number', description: 'Maximum facts to return (1-50, default 10).' },
+        limit: { type: 'number', description: 'Maximum entries to return (1-50, default 10).' },
         scope: {
           type: 'string',
-          enum: ['project', 'global', 'all'],
-          description: 'Scope filter. "project" (default) = global + this project. "global" = universal facts only. "all" = every project.',
+          enum: ['session', 'project', 'global', 'all'],
+          description: 'Scope filter. Default = session + project + global. "session" = this conversation only. "project" = project-wide only. "global" = global only. "all" = everything across all projects.',
         },
       },
       required: [],
     },
   },
   {
-    name: 'lore_hot_write',
+    name: 'lore_session_memory',
     description:
-      'Write a fact or observation to hot memory. Use freely during sessions to track ' +
-      'gotchas, API quirks, environment details, or anything worth remembering. No operator approval needed. ' +
-      'Facts decay over time — frequently accessed items stay hotter.',
+      'Write a memory scoped to this conversation session. Use for decisions, scope boundaries, ' +
+      'rejected approaches, clarifications, or anything relevant to the current session. ' +
+      'Session memories are automatically tied to this conversation and decay over time.',
     inputSchema: {
       type: 'object',
       properties: {
-        key: { type: 'string', description: 'Short identifier for the fact (e.g. "proxmox-api-token-format").' },
-        content: { type: 'string', description: 'The fact or observation to record.' },
-        scope: {
-          type: 'string',
-          enum: ['project', 'global'],
-          description: 'Scope. "project" (default) = visible only in this project. "global" = shared across all projects.',
-        },
+        topic: { type: 'string', description: 'Short identifier (e.g. "auth-approach-decision", "scope-excludes-mobile").' },
+        content: { type: 'string', description: 'The decision, observation, or context to record.' },
       },
-      required: ['key', 'content'],
+      required: ['topic', 'content'],
     },
   },
   {
-    name: 'lore_hot_fieldnote',
+    name: 'lore_project_memory',
     description:
-      'Draft a fieldnote in hot memory for later graduation to the persistent knowledge base. ' +
-      'Use when you hit a non-obvious snag (auth quirk, encoding issue, platform incompatibility). ' +
-      'The operator reviews and graduates hot fieldnotes to the KB via /lore memory burn.',
+      'Write a memory scoped to this project, visible across all sessions. Use for project-level facts, ' +
+      'gotchas, API quirks, environment details, or anything worth remembering across conversations. ' +
+      'No operator approval needed. Memories decay over time.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string', description: 'Short identifier (e.g. "proxmox-api-token-format", "redis-port-override").' },
+        content: { type: 'string', description: 'The fact or observation to record.' },
+      },
+      required: ['topic', 'content'],
+    },
+  },
+  {
+    name: 'lore_fieldnote',
+    description:
+      'Draft a fieldnote — a non-obvious environmental snag (auth quirk, encoding issue, platform incompatibility). ' +
+      'Fieldnotes are global (shared across all projects) and graduate to the persistent knowledge base ' +
+      'via /lore-os-burn.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -380,18 +450,21 @@ const TOOLS = [
     },
   },
   {
-    name: 'lore_hot_session_note',
+    name: 'lore_forget',
     description:
-      'Record a session note — key conversational context like decisions, clarifications, scope boundaries, ' +
-      'or rejected approaches. Use freely throughout the session to preserve important context. ' +
-      'Session notes decay naturally and do not require operator approval.',
+      'Delete a hot memory entry by topic and scope. Use when a memory is outdated, wrong, or no longer relevant. ' +
+      'Use lore_recall first to find the exact topic name.',
     inputSchema: {
       type: 'object',
       properties: {
-        key: { type: 'string', description: 'Short identifier (e.g. "auth-approach-decision", "scope-excludes-mobile").' },
-        content: { type: 'string', description: 'The decision, clarification, or context to record.' },
+        topic: { type: 'string', description: 'The topic key of the memory to delete (exact match from lore_recall).' },
+        scope: {
+          type: 'string',
+          enum: ['session', 'project', 'global'],
+          description: 'Scope of the memory to delete. Default: project.',
+        },
       },
-      required: ['key', 'content'],
+      required: ['topic'],
     },
   },
 ];
@@ -436,17 +509,20 @@ async function handleRequest(req) {
         case 'lore_health':
           text = await loreHealth();
           break;
-        case 'lore_hot_recall':
-          text = await loreHotRecall(args.limit, args.scope);
+        case 'lore_recall':
+          text = await loreRecall(args.limit, args.scope);
           break;
-        case 'lore_hot_write':
-          text = await loreHotWrite(args.key, args.content, args.scope);
+        case 'lore_session_memory':
+          text = await loreSessionMemory(args.topic, args.content);
           break;
-        case 'lore_hot_fieldnote':
-          text = await loreHotFieldnote(args.name, args.description, args.body);
+        case 'lore_project_memory':
+          text = await loreProjectMemory(args.topic, args.content);
           break;
-        case 'lore_hot_session_note':
-          text = await loreHotSessionNote(args.key, args.content);
+        case 'lore_fieldnote':
+          text = await loreFieldnote(args.name, args.description, args.body);
+          break;
+        case 'lore_forget':
+          text = await loreForget(args.topic, args.scope);
           break;
         default:
           return {

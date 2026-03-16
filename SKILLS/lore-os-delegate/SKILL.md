@@ -16,12 +16,7 @@ In every worker prompt, include a constraint for environmental intelligence repo
 
 ## Worker Prompt Template
 
-```text
-Objective: [Concrete, resolved task.]
-Success Criteria: [Pass/fail conditions.]
-Scope/Boundaries: [Allowed paths, services, and repo boundaries.]
-[ENVELOPE-CONTRACT]: Required gotchas/topology report in response.
-```
+See `assets/worker-prompt-template.md` for the worker prompt schema.
 
 ## Post-Return Intelligence Extraction
 
