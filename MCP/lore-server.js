@@ -31,9 +31,11 @@ function getBundleConfig() {
   } catch { return {}; }
 }
 
-function getSidecarPort() {
+function getMemoryServiceUrl() {
   const cfg = getBundleConfig();
-  return cfg.sidecarPort || 9184;
+  if (cfg.memoryServiceUrl) return cfg.memoryServiceUrl;
+  const port = cfg.sidecarPort || 9184;
+  return `http://localhost:${port}`;
 }
 
 function getToken() {
@@ -53,7 +55,7 @@ const HTTP_TIMEOUT_MS = 10000;
 // ── HTTP helpers ────────────────────────────────────────────────────────────
 
 function sidecarUrl(pathname) {
-  return `http://localhost:${getSidecarPort()}${pathname}`;
+  return `${getMemoryServiceUrl()}${pathname}`;
 }
 
 function authHeaders() {
