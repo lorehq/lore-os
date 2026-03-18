@@ -243,8 +243,8 @@ async function loreHealth() {
 
 async function loreRecall(limit, scope) {
   const n = Math.max(1, Math.min(limit || 10, 50));
-  const validScopes = ['session', 'project', 'global', 'all'];
-  const s = validScopes.includes(scope) ? scope : 'project';
+  const validScopes = ['session', 'project', 'working', 'global', 'all'];
+  const s = validScopes.includes(scope) ? scope : 'working';
   const session = readCurrentSession();
   const sessionId = session ? session.id : '';
   try {
@@ -390,7 +390,8 @@ const TOOLS = [
   {
     name: 'lore_recall',
     description:
-      'Recall memories sorted by heat score. Returns session, project, and global memories by default. ' +
+      'Recall memories sorted by heat score. Returns the working set by default: current session, project memories, ' +
+      'other session memories for this project, then global memories. ' +
       'Higher scores = more recently or frequently accessed. Memories decay over time.',
     inputSchema: {
       type: 'object',
@@ -398,8 +399,8 @@ const TOOLS = [
         limit: { type: 'number', description: 'Maximum entries to return (1-50, default 10).' },
         scope: {
           type: 'string',
-          enum: ['session', 'project', 'global', 'all'],
-          description: 'Scope filter. Default = session + project + global. "session" = this conversation only. "project" = project-wide only. "global" = global only. "all" = everything across all projects.',
+          enum: ['session', 'project', 'working', 'global', 'all'],
+          description: 'Scope filter. Default = working set. "session" = this conversation only. "project" = project-wide durable memory only. "working" = current session + project + other sessions in this project + global. "global" = global only. "all" = everything across all projects.',
         },
       },
       required: [],
